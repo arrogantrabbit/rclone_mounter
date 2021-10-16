@@ -1,7 +1,13 @@
 ## Platypus script for simple UI to mount and unmount rclone remotes on macOS
 
+### Prerequisities
 
-To use: 
+- `rclone` at `/usr/local/bin/rclone` from rclone.org, not brew
+- `macFUSE` from https://osxfuse.github.io
+- Python3
+- `platypus` from https://sveinbjorn.org/platypus
+
+### Usage
 
 - Derive user-readable title from rclone remote name by replacing `-` with ` ` and converting to title case
 - Skip remote if its name ends with specific suffixes, such as `-hidden`, `-intermediate`, `-raw`, etc. This is handy when using crypt remote: you would not want to manually mount the underlying raw storage, only mount crypt remote.
@@ -20,5 +26,5 @@ remote = google-drive-raw:
 
 Run the `create_platypus_bundle.sh` to create wrapper. 
 Launch `Mounter.app`
-
+Control mounts from the menu item
 
