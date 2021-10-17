@@ -2,11 +2,8 @@
 import os
 import subprocess
 import sys
-import collections
 import logging
-import threading
 import configparser
-import shutil
 
 # User Configuration
 user_home = os.environ["HOME"]
