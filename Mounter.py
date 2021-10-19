@@ -17,16 +17,16 @@ log_folder = os.path.join(user_home, "Library", "Logs", "Mounter")
 
 # These settings are indispensable for mount stability on macOS
 uber_important_rclone_options = [
-    "--drive-acknowledge-abuse",    # to avoid I/O errors when 
-    "--vfs-cache-mode", 
+    "--drive-acknowledge-abuse",  # to avoid I/O errors when
+    "--vfs-cache-mode",
     "full",
     "--vfs-cache-max-size",
     "1024G",
-    "--daemon-timeout",             # To avoid spurious disconnects
+    "--daemon-timeout",  # To avoid spurious disconnects
     "599s",
     "--daemon",
-    "--dir-cache-time",             # To avoid frequent directory re-fetch
-    "48h"
+    "--dir-cache-time",  # To avoid frequent directory re-fetch
+    "48h",
 ]
 
 # Executes the short running command line utility and logs outputs
@@ -82,11 +82,12 @@ def make_rclone_log_path(key):
 
 
 def flush_all_directory_caches():
-    # https://rclone.org/commands/rclone_mount/#vfs-directory-cache    
-    for p in psutil.process_iter(['name', 'pid', 'cmdline']):
-        if p.name() == 'rclone' and '--daemon' in p.cmdline():
+    # https://rclone.org/commands/rclone_mount/#vfs-directory-cache
+    for p in psutil.process_iter(["name", "pid", "cmdline"]):
+        if p.name() == "rclone" and "--daemon" in p.cmdline():
             logging.info("Flushing directory caches for {}({})".format(p.name(), p.pid))
             os.kill(p.pid, signal.SIGHUP)
+
 
 # User visible prefixes and captions. Must be unique
 safe_unmount_caption = "⛔️ Unmount"
