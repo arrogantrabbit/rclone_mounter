@@ -5,6 +5,9 @@ command -v platypus || { echo "Install platypus"; exit 1 }
 command -v python3 || { echo "Where is python3"; exit 3 }
 
 
+pip3 install psutil 
+pip3 install black
+
 # format the code
 python3 -m black Mounter.py || exit 4
 

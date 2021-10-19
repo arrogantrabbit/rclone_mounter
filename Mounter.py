@@ -4,6 +4,8 @@ import subprocess
 import sys
 import logging
 import configparser
+import psutil
+import signal
 
 # User Configuration
 user_home = os.environ["HOME"]
@@ -15,14 +17,16 @@ log_folder = os.path.join(user_home, "Library", "Logs", "Mounter")
 
 # These settings are indispensable for mount stability on macOS
 uber_important_rclone_options = [
-    "--drive-acknowledge-abuse",
-    "--vfs-cache-mode",
+    "--drive-acknowledge-abuse",    # to avoid I/O errors when 
+    "--vfs-cache-mode", 
     "full",
     "--vfs-cache-max-size",
     "1024G",
-    "--daemon-timeout",
+    "--daemon-timeout",             # To avoid spurious disconnects
     "599s",
     "--daemon",
+    "--dir-cache-time",             # To avoid frequent directory re-fetch
+    "48h"
 ]
 
 # Executes the short running command line utility and logs outputs
@@ -77,6 +81,13 @@ def make_rclone_log_path(key):
     return os.path.join(log_folder, item + ".log")
 
 
+def flush_all_directory_caches():
+    # https://rclone.org/commands/rclone_mount/#vfs-directory-cache    
+    for p in psutil.process_iter(['name', 'pid', 'cmdline']):
+        if p.name() == 'rclone' and '--daemon' in p.cmdline():
+            logging.info("Flushing directory caches for {}({})".format(p.name(), p.pid))
+            os.kill(p.pid, signal.SIGHUP)
+
 # User visible prefixes and captions. Must be unique
 safe_unmount_caption = "⛔️ Unmount"
 force_unmount_caption = "❌ Force Unmount"
@@ -84,6 +95,7 @@ mount_caption = "🎣 Mount"
 show_folder_caption = "📂 Show"
 show_log_caption = "🔍 Logs"
 show_mounter_log_caption = "🔍 Show Mounter Log"
+flush_directory_caches = "🧹 Flush all dir caches"
 
 # Populate the menu if no arguments passed by emitting menu item strings.
 if len(sys.argv) == 1:
@@ -109,6 +121,7 @@ if len(sys.argv) == 1:
             )
 
     print("----")
+    print(flush_directory_caches)
     print(show_mounter_log_caption)
 else:
     action = sys.argv[1]
@@ -152,3 +165,5 @@ else:
                 logging.info("Action Unknown. Doing nothing")
     if show_mounter_log_caption in action:
         run_helper("open", ["open", os.path.join(log_folder, "Mounter.log")])
+    elif flush_directory_caches in action:
+        flush_all_directory_caches()
