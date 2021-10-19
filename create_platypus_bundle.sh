@@ -6,7 +6,7 @@ command -v python3 || { echo "Where is python3"; exit 3 }
 
 
 # format the code
-python3 -m black --line-length 120 Mounter.py || exit 4
+python3 -m black Mounter.py || exit 4
 
  
 

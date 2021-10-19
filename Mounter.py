@@ -54,7 +54,12 @@ remotes.read(rclone_config)
 
 # We parse rclone.conf and look for remote names that don't match the below criteria
 def is_hidden(key):
-    return key.endswith("-raw") or key.endswith("-intermediate") or key.endswith("-hidden") or key == "DEFAULT"
+    return (
+        key.endswith("-raw")
+        or key.endswith("-intermediate")
+        or key.endswith("-hidden")
+        or key == "DEFAULT"
+    )
 
 
 # we use remote names to come up with user friendly titles like so
@@ -97,7 +102,11 @@ if len(sys.argv) == 1:
                 )
             )
         else:
-            print("SUBMENU|🔴 {0}|{1} {0}|{2} {0}".format(make_title(item), mount_caption, show_log_caption))
+            print(
+                "SUBMENU|🔴 {0}|{1} {0}|{2} {0}".format(
+                    make_title(item), mount_caption, show_log_caption
+                )
+            )
 
     print("----")
     print(show_mounter_log_caption)
