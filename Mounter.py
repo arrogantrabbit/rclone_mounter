@@ -163,8 +163,10 @@ else:
             elif show_log_caption in action:
                 run_helper("open", ["open", make_rclone_log_path(item)])
             else:
-                logging.info("Action Unknown. Doing nothing")
+                logging.error("Action {} is unrecognized. Doing nothing.".format(action))
     if show_mounter_log_caption in action:
         run_helper("open", ["open", os.path.join(log_folder, "Mounter.log")])
     elif flush_directory_caches in action:
         flush_all_directory_caches()
+    else:
+        logging.error("Action {} is unrecognized. Doing nothing.".format(action))
