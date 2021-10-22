@@ -15,12 +15,12 @@ rclone_binary = "/usr/local/bin/rclone"
 logging_level = logging.INFO
 log_folder = os.path.join(user_home, "Library", "Logs", "Mounter")
 
-# We assume the data will only be changed through this remote, 
+# We assume the data will only be changed through this remote,
 # and not by any other means, including web interface or another rclone instance,
 # we are going to effectively disable remote refresh
 uber_important_rclone_options = [
     #
-    # to avoid I/O errors when file is considered "harmful" by Google 
+    # to avoid I/O errors when file is considered "harmful" by Google
     "--drive-acknowledge-abuse",
     #
     # Full cache mode for best compatibility
@@ -62,6 +62,7 @@ uber_important_rclone_options = [
     "--daemon",
 ]
 
+
 # Executes the short running command line utility and logs outputs
 def run_helper(shortname, args):
     logging.info("Launching {}: {}".format(shortname, " ".join(args)))
@@ -87,6 +88,7 @@ logging.basicConfig(
 # Parser for rclone configuration
 remotes = configparser.ConfigParser()
 remotes.read(rclone_config)
+
 
 # We parse rclone.conf and look for remote names that don't match the below criteria
 def is_hidden(key):
