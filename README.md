@@ -7,23 +7,44 @@
 - Python3 and pip3
 - `platypus` from https://sveinbjorn.org/platypus
 
-### Usage
+### Configuration
 
-- Derive user-readable title from rclone remote name by replacing `-` with ` ` and converting to title case
-- Skip remote if its name ends with specific suffixes, such as `-hidden`, `-intermediate`, `-raw`, etc. This is handy when using crypt remote: you would not want to manually mount the underlying raw storage, only mount crypt remote.
+Name rclone remotes with the expectation that the script: 
+- Derives user-readable title from rclone remote name by replacing `-` with ` ` and converting to title case
+- Skips remote if its name ends with specific suffixes, such as `-hidden`, `-intermediate`, `-raw`, etc. This is handy when using crypt remote: you would not want to manually mount the underlying raw storage, only mount crypt remote.
 
 For example: 
+
 ```
-[google-drive-raw]
+[google-drive]
 type = drive
 ...
 
-[google-drive]
-type = crypt
-remote = google-drive-raw:
+[encrypted-data-raw]
+type = drive
 ...
+
+[secret-encrypted-data]
+type = crypt
+remote = encrypted-data-raw:
 ```
 
-Run the `make run` to create wrapper at ~/Applications and launch it. 
-Control mounts from the menu item
+will result in the main menu containing the following items (one shown as mounted, another unmounted for illustration purposes):
 
+<br>
+🟢  Google Drive	<br>
+🔴  Secret Encrypted Data<br>
+
+Each item will have a submenu, with the following actions: 
+<br>
+📂 Show<br>
+⛔️ Unmount<br>
+❌ Force<br>
+🎣 Mount<br>
+🔍 Logs<br>
+
+### Usage
+
+Checkout the repository and run the `make run` to create `Mounter.app` wrapper at `~/Applications` and launch it. Look for '🏔' in the menu bar.
+
+Run `make` without arguments to list available targets
