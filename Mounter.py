@@ -65,9 +65,9 @@ uber_important_rclone_options = (
         # run as a daemon
         "--daemon",
     ]
-    + ["-vv"]
+    + (["-vv"]
     if rclone_verbose_logging
-    else []
+    else [])
 )
 
 
