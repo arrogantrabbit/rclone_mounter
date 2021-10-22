@@ -2,7 +2,7 @@
 
 ### Prerequisites
 
-- `rclone` from rclone.org, not brew
+- `rclone` from https://rclone.org, not brew
 - `macFUSE` from https://osxfuse.github.io
 - Python3 and pip3
 - `platypus` from https://sveinbjorn.org/platypus
@@ -27,16 +27,16 @@ type = drive
 [secret-encrypted-data]
 type = crypt
 remote = encrypted-data-raw:
+...
 ```
 
 will result in the main menu containing the following items (one shown as mounted, another unmounted for illustration purposes):
 
 🟢  Google Drive	<br>
 🔴  Secret Encrypted Data<br>
-<br>
 
 Each item will have a submenu, with the following actions: 
-<br>
+
 📂 Show<br>
 ⛔️ Unmount<br>
 ❌ Force<br>
