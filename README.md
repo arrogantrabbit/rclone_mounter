@@ -31,9 +31,9 @@ remote = encrypted-data-raw:
 
 will result in the main menu containing the following items (one shown as mounted, another unmounted for illustration purposes):
 
-<br>
 🟢  Google Drive	<br>
 🔴  Secret Encrypted Data<br>
+<br>
 
 Each item will have a submenu, with the following actions: 
 <br>
