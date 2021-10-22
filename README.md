@@ -1,6 +1,6 @@
 ## Platypus script for simple UI to mount and unmount rclone remotes on macOS
 
-### Prerequisities
+### Prerequisites
 
 - `rclone` from rclone.org, not brew
 - `macFUSE` from https://osxfuse.github.io
