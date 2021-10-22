@@ -1,10 +1,16 @@
-.PHONY: help
 
+LOCAL_TARGET="Mounter.app"
 TARGET="$(HOME)/Applications/Mounter.app"
 
+.PHONY: help
 help: 
-	@echo "Available targets"
+	@echo 
+	@echo "Available targets:"
+	@echo 
 	@fgrep -h "##" $(MAKEFILE_LIST) | fgrep -v fgrep | sed -e 's/\\$$//' | sed -e 's/##//'
+	@echo
+	@echo "Example: "
+	@echo "   make run"
 
 define check_install_shell
 	@command -v $(1) > /dev/null || (echo "ERROR: $(1) is missing. $(2)"; exit 1)
@@ -30,7 +36,8 @@ patch-rclone-path: check-tools
 	@sed -i "" "s|rclone_binary = .*$$|rclone_binary = \"$$(which rclone)\"|g" Mounter.py
 
 define platypusify
-	@mkdir -p "$(TARGET)"
+	@echo targeting $(2)
+	@mkdir -p "$(2)"
 	@platypus --overwrite \
 	     --background \
 	     --name "Mounter"  \
@@ -38,13 +45,15 @@ define platypusify
 	     --status-item-kind "Text" --status-item-title '🏔' --status-item-sysfont \
 	     --bundle-identifier "com.arrogantrabbit.mounter" \
 	     "./Mounter.py" \
-	     "$(TARGET)" $(1)
+	     "$(2)" $(1)
 endef
 
 .PHONY: install 
-install:		## Install the Platypus wrapper to "~/Applications"
+install:		## Install the Platypus wrapper to "~/Applications" with default logging
 install: check-tools patch-rclone-path
-	$(call platypusify,--optimize-nib)
+	@echo "Disabling rclone_verbose_logging in Mounter.py"
+	@sed -i "" "s|rclone_verbose_logging = .*$$|rclone_verbose_logging = False|g" Mounter.py
+	$(call platypusify,--optimize-nib,$(TARGET))
 
 .PHONY: run
 run: 			## Make and run wrapper.
@@ -63,17 +72,19 @@ check-tools-dev: check-tools
 .PHONY: format
 format: 		## Run Black formatter and Flake8
 format: check-tools-dev 
-	@python3 -m black --line-length 88 Mounter.py
-	@python3 -m flake8 --max-line-length 88 Mounter.py
+	@python3 -m black --line-length 90 Mounter.py
+	@python3 -m flake8 --max-line-length 90 Mounter.py
 
 .PHONY: install-dev
-install-dev:		## Install the Platypus wrapper with symlink to script instead of copying
+install-dev:		## Create wrapper with symlink to script and verbose logging.
 install-dev: check-tools-dev format patch-rclone-path
-	$(call platypusify,--symlink)
+	@echo "Enabling rclone_verbose_logging in Mounter.py"
+	@sed -i "" "s|rclone_verbose_logging = .*$$|rclone_verbose_logging = True|g" Mounter.py
+	$(call platypusify,--symlink,$(LOCAL_TARGET))
 	
 .PHONY: run-dev
-run-dev: 		## Make and run wrapper with symlink to script instead of copying
+run-dev: 		## Make and run dev wrapper in local folder
 run-dev: install-dev
-	@echo "Launching $(TARGET)"
-	@open "$(TARGET)"
+	@echo "Launching $(LOCAL_TARGET)"
+	@open "$(LOCAL_TARGET)"
 	
