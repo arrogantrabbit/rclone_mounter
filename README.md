@@ -2,9 +2,9 @@
 
 ### Prerequisities
 
-- `rclone` at `/usr/local/bin/rclone` from rclone.org, not brew
+- `rclone` from rclone.org, not brew
 - `macFUSE` from https://osxfuse.github.io
-- Python3
+- Python3 and pip3
 - `platypus` from https://sveinbjorn.org/platypus
 
 ### Usage
@@ -24,7 +24,6 @@ remote = google-drive-raw:
 ...
 ```
 
-Run the `create_platypus_bundle.sh` to create wrapper. 
-Launch `Mounter.app`
+Run the `make run` to create wrapper at ~/Applications and launch it. 
 Control mounts from the menu item
 
