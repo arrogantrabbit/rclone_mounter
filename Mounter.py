@@ -78,7 +78,7 @@ def run_helper(shortname, args):
     if p.stdout:
         logging.info("{}: {}".format(shortname, p.stdout))
     if p.stderr:
-        logging.info("{}: {}".format(shortname, p.stderr))
+        logging.error("{}: {}".format(shortname, p.stderr))
 
 
 # Initialize logging
