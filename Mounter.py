@@ -15,60 +15,56 @@ rclone_binary = "/usr/local/bin/rclone"
 logging_level = logging.INFO
 log_folder = os.path.join(user_home, "Library", "Logs", "Mounter")
 rclone_verbose_logging = False
+rclone_verbose_logging_flags = ["-v"]
 
 # We assume the data will only be changed through this remote,
 # and not by any other means, including web interface or another rclone instance,
 # we are going to effectively disable remote refresh
-uber_important_rclone_options = (
-    [
-        #
-        # to avoid I/O errors when file is considered "harmful" by Google
-        "--drive-acknowledge-abuse",
-        #
-        # Full cache mode for best compatibility
-        "--vfs-cache-mode",
-        "full",
-        #
-        # 1TB max total size cached
-        "--vfs-cache-max-size",
-        "1024G",
-        #
-        # Cache files forever
-        "--vfs-cache-max-age",
-        "1000h",
-        #
-        # Check cache for stale objects every so often. Default is 1m, 5 min is
-        # good enough; we mainly want to remove files from cache once the size
-        # exceeds the max-size above
-        "--vfs-cache-poll-interval",
-        "5m",
-        #
-        # time the kernel caches the attributes for. Reduces roundtrips to kernel,
-        # no risk of corruption since files don't change externally.
-        # Otherwise -- remove it!
-        "--attr-timeout",
-        "60s",
-        #
-        # Cache directories forever.
-        # We can always send "SIGHUP" to force refresh directory caches
-        "--dir-cache-time",
-        "1000h",
-        #
-        # Don't poll for changes on remote
-        "--poll-interval",
-        "0",
-        #
-        # For how long kernel should wait before giving up. Imperative for mount stabilty
-        "--daemon-timeout",
-        "599s",
-        #
-        # run as a daemon
-        "--daemon",
-    ]
-    + (["-vv"]
-    if rclone_verbose_logging
-    else [])
-)
+uber_important_rclone_options = [
+    #
+    # to avoid I/O errors when file is considered "harmful" by Google
+    "--drive-acknowledge-abuse",
+    #
+    # Full cache mode for best compatibility
+    "--vfs-cache-mode",
+    "full",
+    #
+    # 1TB max total size cached
+    "--vfs-cache-max-size",
+    "1024G",
+    #
+    # Cache files forever
+    "--vfs-cache-max-age",
+    "1000h",
+    #
+    # Check cache for stale objects every so often. Default is 1m, 5 min is
+    # good enough; we mainly want to remove files from cache once the size
+    # exceeds the max-size above
+    "--vfs-cache-poll-interval",
+    "5m",
+    #
+    # time the kernel caches the attributes for. Reduces roundtrips to kernel,
+    # no risk of corruption since files don't change externally.
+    # Otherwise -- remove it!
+    "--attr-timeout",
+    "60s",
+    #
+    # Cache directories forever.
+    # We can always send "SIGHUP" to force refresh directory caches
+    "--dir-cache-time",
+    "1000h",
+    #
+    # Don't poll for changes on remote
+    "--poll-interval",
+    "0",
+    #
+    # For how long kernel should wait before giving up. Imperative for mount stabilty
+    "--daemon-timeout",
+    "599s",
+    #
+    # run as a daemon
+    "--daemon",
+] + (rclone_verbose_logging_flags if rclone_verbose_logging else [])
 
 
 # Executes the short running command line utility and logs outputs
@@ -123,10 +119,26 @@ def make_rclone_log_path(key):
     return os.path.join(log_folder, item + ".log")
 
 
-def flush_all_directory_caches():
+def flush_directory_caches(path=None):
     # https://rclone.org/commands/rclone_mount/#vfs-directory-cache
     for p in psutil.process_iter(["name", "pid", "cmdline"]):
-        if p.name() == "rclone" and "--daemon" in p.cmdline():
+        if not p.name() == "rclone":
+            continue
+        try:
+            cmdline = p.cmdline()
+        except psutil.ZombieProcess:
+            logging.warning("rclone({}) is a zombie process, skipped".format(p.pid))
+            continue
+        except Exception as e:
+            logging.info(
+                "Exception occured getting a command line for rclone({}): {}".format(
+                    p.pid, e
+                )
+            )
+            continue
+        if "--daemon" not in cmdline:
+            continue
+        if not path or path in cmdline:
             logging.info("Flushing directory caches for {}({})".format(p.name(), p.pid))
             os.kill(p.pid, signal.SIGHUP)
 
@@ -135,10 +147,11 @@ def flush_all_directory_caches():
 safe_unmount_caption = "⛔️ Unmount"
 force_unmount_caption = "❌ Force Unmount"
 mount_caption = "🎣 Mount"
-show_folder_caption = "📂 Show"
-show_log_caption = "🔍 Logs"
+show_folder_caption = "📂 Show Mounted"
+show_log_caption = "🔍 Show Logs For"
+flush_directory_caches_for_caption = "🧹 Flush Dir Caches For"
 show_mounter_log_caption = "🔍 Show Mounter Log"
-flush_directory_caches = "🧹 Flush all dir caches"
+flush_directory_caches_caption = "🧹 Flush All Dir Caches"
 
 # Populate the menu if no arguments passed by emitting menu item strings.
 if len(sys.argv) == 1:
@@ -148,11 +161,12 @@ if len(sys.argv) == 1:
             continue
         if os.path.ismount(make_path(item)):
             print(
-                "SUBMENU|🟢 {0}|{1} {0}|{2} {0}|{3} {0}|{4} {0}".format(
+                "SUBMENU|🟢 {0}|{1} {0}|{2} {0}|{3} {0}|{4} {0}|{5} {0}".format(
                     make_title(item),
                     show_folder_caption,
                     safe_unmount_caption,
                     force_unmount_caption,
+                    flush_directory_caches_for_caption,
                     show_log_caption,
                 )
             )
@@ -164,16 +178,18 @@ if len(sys.argv) == 1:
             )
 
     print("----")
-    print(flush_directory_caches)
+    print(flush_directory_caches_caption)
     print(show_mounter_log_caption)
 else:
     action = sys.argv[1]
-    logging.info("Action received: {}".format(action))
+    target_matched = False
+    logging.info('Action received: "{}"'.format(action))
     for item in remotes:
         if is_hidden(item):
             continue
         path = make_path(item)
         if make_title(item) in action:
+            target_matched = True
             if mount_caption in action:
                 if not os.path.exists(path):
                     run_helper("mkdir", ["mkdir", "-p", path])
@@ -203,11 +219,19 @@ else:
                 run_helper("open", ["open", path])
             elif show_log_caption in action:
                 run_helper("open", ["open", make_rclone_log_path(item)])
+            elif flush_directory_caches_for_caption in action:
+                flush_directory_caches(path)
             else:
-                logging.error("Action {} is unrecognized. Doing nothing.".format(action))
-    if show_mounter_log_caption in action:
-        run_helper("open", ["open", os.path.join(log_folder, "Mounter.log")])
-    elif flush_directory_caches in action:
-        flush_all_directory_caches()
-    else:
-        logging.error("Action {} is unrecognized. Doing nothing.".format(action))
+                logging.error(
+                    'Action "{}" is unrecognized for object. Doing nothing.'.format(
+                        action
+                    )
+                )
+
+    if not target_matched:
+        if show_mounter_log_caption in action:
+            run_helper("open", ["open", os.path.join(log_folder, "Mounter.log")])
+        elif flush_directory_caches_caption in action:
+            flush_directory_caches()
+        else:
+            logging.error('Action "{}" is unrecognized. Doing nothing.'.format(action))
