@@ -63,6 +63,13 @@ uber_important_rclone_options = [
     #
     # run as a daemon
     "--daemon",
+    #
+    # output statistics and progres periodically
+    "--stats",
+    "10s",
+    #
+    # statistics as one-liners
+    "--stats-one-line",
 ] + rclone_logging_flags
 
 
