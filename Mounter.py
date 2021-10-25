@@ -14,8 +14,7 @@ rclone_config = os.path.join(user_home, ".config", "rclone", "rclone.conf")
 rclone_binary = "/usr/local/bin/rclone"
 logging_level = logging.INFO
 log_folder = os.path.join(user_home, "Library", "Logs", "Mounter")
-rclone_verbose_logging = False
-rclone_verbose_logging_flags = ["-v"]
+rclone_logging_flags = ["-v"]
 
 # We assume the data will only be changed through this remote,
 # and not by any other means, including web interface or another rclone instance,
@@ -64,7 +63,7 @@ uber_important_rclone_options = [
     #
     # run as a daemon
     "--daemon",
-] + (rclone_verbose_logging_flags if rclone_verbose_logging else [])
+] + rclone_logging_flags
 
 
 # Executes the short running command line utility and logs outputs
@@ -223,8 +222,8 @@ else:
                 flush_directory_caches(path)
             else:
                 logging.error(
-                    'Action "{}" is unrecognized for object. Doing nothing.'.format(
-                        action
+                    'Action "{}" is unrecognized for "{}".'.format(
+                        action, make_title(item)
                     )
                 )
 

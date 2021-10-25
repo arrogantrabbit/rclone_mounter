@@ -51,8 +51,6 @@ endef
 .PHONY: install 
 install:		## Install the Platypus wrapper to "~/Applications" with default logging
 install: check-tools patch-rclone-path
-	@echo "Disabling rclone_verbose_logging in Mounter.py"
-	@sed -i "" "s|rclone_verbose_logging = .*$$|rclone_verbose_logging = False|g" Mounter.py
 	$(call platypusify,--optimize-nib,$(TARGET))
 
 .PHONY: run
@@ -78,8 +76,6 @@ format: check-tools-dev
 .PHONY: install-dev
 install-dev:		## Create wrapper with symlink to script and verbose logging.
 install-dev: check-tools-dev format patch-rclone-path
-	@echo "Enabling rclone_verbose_logging in Mounter.py"
-	@sed -i "" "s|rclone_verbose_logging = .*$$|rclone_verbose_logging = True|g" Mounter.py
 	$(call platypusify,--symlink,$(LOCAL_TARGET))
 	
 .PHONY: run-dev
