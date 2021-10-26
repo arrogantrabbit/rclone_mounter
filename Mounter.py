@@ -14,7 +14,7 @@ rclone_config = os.path.join(user_home, ".config", "rclone", "rclone.conf")
 rclone_binary = "/usr/local/bin/rclone"
 logging_level = logging.INFO
 log_folder = os.path.join(user_home, "Library", "Logs", "Mounter")
-rclone_logging_flags = ["-v"]
+rclone_logging_flags = []
 
 # We assume the data will only be changed through this remote,
 # and not by any other means, including web interface or another rclone instance,
@@ -61,15 +61,18 @@ uber_important_rclone_options = [
     "--daemon-timeout",
     "599s",
     #
-    # run as a daemon
+    # Run as a daemon
     "--daemon",
     #
-    # output statistics and progres periodically
-    "--stats",
-    "10s",
-    #
-    # statistics as one-liners
+    # Statistics as one-liners
     "--stats-one-line",
+    #
+    # Adjust stats output to appear without -v
+    "--stats-log-level", "NOTICE", 
+    #
+    # Output statistics and progres periodically, until SIGINFO works in --daemon mode
+    "--stats",
+    "1m",
 ] + rclone_logging_flags
 
 
@@ -179,6 +182,7 @@ flush_directory_caches_caption = "🧹 Flush All Dir Caches"
 
 # Populate the menu if no arguments passed by emitting menu item strings.
 if len(sys.argv) == 1:
+
     logging.info("Populating the menu")
     for item in remotes:
         if is_hidden(item):
@@ -198,7 +202,7 @@ if len(sys.argv) == 1:
             )
         elif daemon_exists_for_path(path):
             print(
-                "SUBMENU|🟡 {0} [Mounting...]|{1} {0}".format(
+                "SUBMENU|🟡 {0} [Working...]|{1} {0}".format(
                     make_title(item), show_log_caption
                 )
             )
