@@ -184,12 +184,8 @@ if len(sys.argv) == 1:
         if is_hidden(item):
             continue
         path = make_path(item)
-        mounted = os.path.ismount(path)
-        daemon_exists = daemon_exists_for_path(path)
 
-        logging.debug("{} is mounted: {}".format(path, mounted))
-        logging.debug("{} has daemon: {}".format(path, daemon_exists))
-        if mounted:
+        if os.path.ismount(path):
             print(
                 "SUBMENU|🟢 {0}|{1} {0}|{2} {0}|{3} {0}|{4} {0}|{5} {0}".format(
                     make_title(item),
@@ -200,7 +196,7 @@ if len(sys.argv) == 1:
                     show_log_caption,
                 )
             )
-        elif daemon_exists:
+        elif daemon_exists_for_path(path):
             print(
                 "SUBMENU|🟡 {0} [Mounting...]|{1} {0}".format(
                     make_title(item), show_log_caption
