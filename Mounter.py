@@ -125,7 +125,8 @@ def make_rclone_log_path(key):
     return os.path.join(log_folder, item + ".log")
 
 
-def flush_directory_caches(path=None):
+def build_list_of_active_daemons():
+    active_daemons = dict()
     # https://rclone.org/commands/rclone_mount/#vfs-directory-cache
     for p in psutil.process_iter(["name", "pid", "cmdline"]):
         if not p.name() == "rclone":
@@ -144,9 +145,26 @@ def flush_directory_caches(path=None):
             continue
         if "--daemon" not in cmdline:
             continue
+        active_daemons[p.pid] = cmdline
+
+    return active_daemons
+
+
+active_daemons = build_list_of_active_daemons()
+
+
+def flush_directory_caches(path=None):
+    for pid, cmdline in active_daemons.items():
         if not path or path in cmdline:
-            logging.info("Flushing directory caches for {}({})".format(p.name(), p.pid))
-            os.kill(p.pid, signal.SIGHUP)
+            logging.info("Flushing directory caches for {}({})".format("rclone", pid))
+            os.kill(pid, signal.SIGHUP)
+
+
+def daemon_exists_for_path(path):
+    for pid, cmdline in active_daemons.items():
+        if path in cmdline:
+            return True
+    return False
 
 
 # User visible prefixes and captions. Must be unique
@@ -165,7 +183,13 @@ if len(sys.argv) == 1:
     for item in remotes:
         if is_hidden(item):
             continue
-        if os.path.ismount(make_path(item)):
+        path = make_path(item)
+        mounted = os.path.ismount(path)
+        daemon_exists = daemon_exists_for_path(path)
+
+        logging.debug("{} is mounted: {}".format(path, mounted))
+        logging.debug("{} has daemon: {}".format(path, daemon_exists))
+        if mounted:
             print(
                 "SUBMENU|🟢 {0}|{1} {0}|{2} {0}|{3} {0}|{4} {0}|{5} {0}".format(
                     make_title(item),
@@ -174,6 +198,12 @@ if len(sys.argv) == 1:
                     force_unmount_caption,
                     flush_directory_caches_for_caption,
                     show_log_caption,
+                )
+            )
+        elif daemon_exists:
+            print(
+                "SUBMENU|🟡 {0} [Mounting...]|{1} {0}".format(
+                    make_title(item), show_log_caption
                 )
             )
         else:
