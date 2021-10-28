@@ -259,63 +259,45 @@ def daemon_exists_for_path(path, daemons):
     return False
 
 
-class PlatypusMenu:
-    """Facilitate platypus menu handling"""
-
-    def __init__(self):
-        # Parser for rclone configuration
-        self.remotes = configparser.ConfigParser()
-        self.remotes.read(RCLONE_CONFIG)
-
-        # Active rclone daemons
-        self.daemons = active_daemons()
-
-    def populate_menu(self):
-        """Populate the menu if no arguments passed by emitting menu item strings."""
-        logging.info("Populating the menu")
-        for remote in self.remotes:
-            if is_hidden(remote):
-                continue
-            path = make_path(remote)
-            title = make_title(remote)
-            if os.path.ismount(path):
-                print(
-                    f"SUBMENU|🟢 {title}"
-                    + f"|{CAPTION_SHOW_FOLDER} {title}"
-                    + f"|{CAPTION_SAFE_UNMOUNT} {title}"
-                    + f"|{CAPTION_FORCE_UNMOUNT} {title}"
-                    + f"|{CAPTION_FLUSH_DIRECTORY_CACHES_FOR} {title}"
-                    + f"|{CAPTION_SHOW_LOG} {title}"
-                )
-            elif daemon_exists_for_path(path, self.daemons):
-                print(f"SUBMENU|🟡 {title} [Working...]|{CAPTION_SHOW_LOG} {title}")
-            else:
-                print(
-                    f"SUBMENU|🔴 {title}"
-                    + f"|{CAPTION_MOUNT} {title}"
-                    + f"|{CAPTION_SHOW_LOG} {title}"
-                )
-
-        print("----")
-        print(CAPTION_FLUSH_DIRECTORY_CACHES_ALL)
-        print(CAPTION_SHOW_MOUNTER_LOG)
-
-    def perform_action(self, action):
-        """Try to apply action to specific remote, if none found -- globally"""
-        logging.info('Action received: "%s"', action)
-        for remote in self.remotes:
-            if not is_hidden(remote) and make_title(remote) in action:
-                perform_action_for_remote(remote, action, self.daemons)
-                return
-        perform_action_global(action, self.daemons)
-
-    def process_input(self, args):
-        """Entry point. Do all the work"""
-
-        if len(args) == 1:
-            self.populate_menu()
+def populate_menu(remotes, daemons):
+    """Populate the menu if no arguments passed by emitting menu item strings."""
+    logging.info("Populating the menu")
+    for remote in remotes:
+        if is_hidden(remote):
+            continue
+        path = make_path(remote)
+        title = make_title(remote)
+        if os.path.ismount(path):
+            print(
+                f"SUBMENU|🟢 {title}"
+                + f"|{CAPTION_SHOW_FOLDER} {title}"
+                + f"|{CAPTION_SAFE_UNMOUNT} {title}"
+                + f"|{CAPTION_FORCE_UNMOUNT} {title}"
+                + f"|{CAPTION_FLUSH_DIRECTORY_CACHES_FOR} {title}"
+                + f"|{CAPTION_SHOW_LOG} {title}"
+            )
+        elif daemon_exists_for_path(path, daemons):
+            print(f"SUBMENU|🟡 {title} [Working...]|{CAPTION_SHOW_LOG} {title}")
         else:
-            self.perform_action(args[1])
+            print(
+                f"SUBMENU|🔴 {title}"
+                + f"|{CAPTION_MOUNT} {title}"
+                + f"|{CAPTION_SHOW_LOG} {title}"
+            )
+
+    print("----")
+    print(CAPTION_FLUSH_DIRECTORY_CACHES_ALL)
+    print(CAPTION_SHOW_MOUNTER_LOG)
+
+
+def perform_action(action, remotes, daemons):
+    """Try to apply action to specific remote, if none found -- globally"""
+    logging.info('Action received: "%s"', action)
+    for remote in remotes:
+        if not is_hidden(remote) and make_title(remote) in action:
+            perform_action_for_remote(remote, action, daemons)
+            return
+    perform_action_global(action, daemons)
 
 
 if __name__ == "__main__":
@@ -332,4 +314,14 @@ if __name__ == "__main__":
         level=LOGGING_LEVEL,
     )
 
-    PlatypusMenu().process_input(sys.argv)
+    # Parser for rclone configuration
+    rclone_remotes = configparser.ConfigParser()
+    rclone_remotes.read(RCLONE_CONFIG)
+
+    # Active rclone daemons
+    active_daemons = active_daemons()
+
+    if len(sys.argv) == 1:
+        populate_menu(rclone_remotes, active_daemons)
+    else:
+        perform_action(sys.argv[1], rclone_remotes, active_daemons)
