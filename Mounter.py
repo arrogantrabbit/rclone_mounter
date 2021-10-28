@@ -14,12 +14,37 @@ rclone_config = os.path.join(user_home, ".config", "rclone", "rclone.conf")
 rclone_binary = "/usr/local/bin/rclone"
 logging_level = logging.INFO
 log_folder = os.path.join(user_home, "Library", "Logs", "Mounter")
+
+# Common choices include "-v" or "-vv" for debugging.
 rclone_logging_flags = []
 
-# We assume the data will only be changed through this remote,
+# If the data will only be changed through this mounted remote,
 # and not by any other means, including web interface or another rclone instance,
-# we are going to effectively disable remote refresh
-uber_important_rclone_options = [
+# this will effectively disable remote refresh for a small gain in performance.
+rclone_options_exclusive_mode = [
+    #
+    # time the kernel caches the attributes for. Reduces roundtrips to kernel,
+    # no risk of corruption if files don't change externally.
+    # Otherwise -- remove it!
+    "--attr-timeout",
+    "60s",
+    #
+    # Cache directories forever.
+    # We can always send "SIGHUP" to force refresh directory caches
+    "--dir-cache-time",
+    "1000h",
+    #
+    # Don't poll for changes from remote
+    "--poll-interval",
+    "0",
+]
+
+# Options for cases when the remote can be concurrently accessed via both mount and
+# some other side channel. Relevant optons are left to default, this placeholder will
+# help with future expansion
+rclone_options_default_mode = []
+
+rclone_options_common = [
     #
     # to avoid I/O errors when file is considered "harmful" by Google
     "--drive-acknowledge-abuse",
@@ -42,21 +67,6 @@ uber_important_rclone_options = [
     "--vfs-cache-poll-interval",
     "5m",
     #
-    # time the kernel caches the attributes for. Reduces roundtrips to kernel,
-    # no risk of corruption since files don't change externally.
-    # Otherwise -- remove it!
-    "--attr-timeout",
-    "60s",
-    #
-    # Cache directories forever.
-    # We can always send "SIGHUP" to force refresh directory caches
-    "--dir-cache-time",
-    "1000h",
-    #
-    # Don't poll for changes on remote
-    "--poll-interval",
-    "0",
-    #
     # For how long kernel should wait before giving up. Imperative for mount stabilty
     "--daemon-timeout",
     "599s",
@@ -68,12 +78,13 @@ uber_important_rclone_options = [
     "--stats-one-line",
     #
     # Adjust stats output to appear without -v
-    "--stats-log-level", "NOTICE", 
+    "--stats-log-level",
+    "NOTICE",
     #
     # Output statistics and progres periodically, until SIGINFO works in --daemon mode
     "--stats",
     "1m",
-] + rclone_logging_flags
+]
 
 
 # Executes the short running command line utility and logs outputs
@@ -103,7 +114,14 @@ remotes = configparser.ConfigParser()
 remotes.read(rclone_config)
 
 
+# Rules to managing remote names
+# 1. Ignore remotes with -raw, -intermediate, -hidden suffixes
+# 2. Strip -exclusive suffix, but add configure additional flags that disable updates from
+#    the remote to improve performance.
+# 3. Replace - with space and make title case
 # We parse rclone.conf and look for remote names that don't match the below criteria
+
+
 def is_hidden(key):
     return (
         key.endswith("-raw")
@@ -113,19 +131,30 @@ def is_hidden(key):
     )
 
 
+SUFFIX_EXCLUSIVE = "-exclusive"
+
+
+def is_exclusive(key):
+    return key.endswith(SUFFIX_EXCLUSIVE)
+
+
+def strip_suffixes(key):
+    return key.replace(SUFFIX_EXCLUSIVE, "")
+
+
 # we use remote names to come up with user friendly titles like so
 def make_title(key):
-    return key.replace("-", " ").title()
+    return strip_suffixes(key).replace("-", " ").title()
 
 
 # Mount points are also derived from the remote names
 def make_path(key):
-    return os.path.join(mount_root, key)
+    return os.path.join(mount_root, strip_suffixes(key))
 
 
 # Path for rclone log file
 def make_rclone_log_path(key):
-    return os.path.join(log_folder, item + ".log")
+    return os.path.join(log_folder, strip_suffixes(key) + ".log")
 
 
 def build_list_of_active_daemons():
@@ -184,15 +213,15 @@ flush_directory_caches_caption = "🧹 Flush All Dir Caches"
 if len(sys.argv) == 1:
 
     logging.info("Populating the menu")
-    for item in remotes:
-        if is_hidden(item):
+    for remote in remotes:
+        if is_hidden(remote):
             continue
-        path = make_path(item)
+        path = make_path(remote)
 
         if os.path.ismount(path):
             print(
                 "SUBMENU|🟢 {0}|{1} {0}|{2} {0}|{3} {0}|{4} {0}|{5} {0}".format(
-                    make_title(item),
+                    make_title(remote),
                     show_folder_caption,
                     safe_unmount_caption,
                     force_unmount_caption,
@@ -203,13 +232,13 @@ if len(sys.argv) == 1:
         elif daemon_exists_for_path(path):
             print(
                 "SUBMENU|🟡 {0} [Working...]|{1} {0}".format(
-                    make_title(item), show_log_caption
+                    make_title(remote), show_log_caption
                 )
             )
         else:
             print(
                 "SUBMENU|🔴 {0}|{1} {0}|{2} {0}".format(
-                    make_title(item), mount_caption, show_log_caption
+                    make_title(remote), mount_caption, show_log_caption
                 )
             )
 
@@ -220,11 +249,9 @@ else:
     action = sys.argv[1]
     target_matched = False
     logging.info('Action received: "{}"'.format(action))
-    for item in remotes:
-        if is_hidden(item):
-            continue
-        path = make_path(item)
-        if make_title(item) in action:
+    for remote in remotes:
+        if not is_hidden(remote) and make_title(remote) in action:
+            path = make_path(remote)
             target_matched = True
             if mount_caption in action:
                 if not os.path.exists(path):
@@ -236,14 +263,20 @@ else:
                         "--config",
                         rclone_config,
                         "mount",
-                        item + ":",
+                        remote + ":",
                         path,
                         "--volname",
-                        make_title(item),
+                        make_title(remote),
                         "--log-file",
-                        make_rclone_log_path(item),
+                        make_rclone_log_path(remote),
                     ]
-                    + uber_important_rclone_options,
+                    + rclone_options_common
+                    + (
+                        rclone_options_exclusive_mode
+                        if is_exclusive(remote)
+                        else rclone_options_default_mode
+                    )
+                    + rclone_logging_flags,
                 )
             elif safe_unmount_caption in action:
                 run_helper("unmount", ["/usr/sbin/diskutil", "unmount", path])
@@ -254,13 +287,13 @@ else:
             elif show_folder_caption in action:
                 run_helper("open", ["open", path])
             elif show_log_caption in action:
-                run_helper("open", ["open", make_rclone_log_path(item)])
+                run_helper("open", ["open", make_rclone_log_path(remote)])
             elif flush_directory_caches_for_caption in action:
                 flush_directory_caches(path)
             else:
                 logging.error(
                     'Action "{}" is unrecognized for "{}".'.format(
-                        action, make_title(item)
+                        action, make_title(remote)
                     )
                 )
 

@@ -10,8 +10,9 @@
 ### Configuration
 
 Name rclone remotes with the expectation that the script: 
-- Derives user-readable title from rclone remote name by replacing `-` with ` ` and converting to title case
+- Derives user-readable title from rclone remote names by replacing `-` with ` ` and converting to title case
 - Skips remote if its name ends with specific suffixes, such as `-hidden`, `-intermediate`, `-raw`, etc. This is handy when using crypt remote: you would not want to manually mount the underlying raw storage, only mount crypt remote.
+- If special suffix `-exclusive` is encountered, it is first stripped, and then special rclone options are added that turn off or significantly slow down updates from remote. This is worthwhile optimization when the data be changed through the mount exclusively, not via the web interface or another rclone instance. Having these flags set and then attempting to modify content on the remote anyway outside of mount will likely result in corruption. 
 
 For example: 
 
@@ -24,7 +25,7 @@ type = drive
 type = drive
 ...
 
-[secret-encrypted-data]
+[secret-encrypted-data-exclusive]
 type = crypt
 remote = encrypted-data-raw:
 ...
@@ -34,6 +35,7 @@ will result in the main menu containing the following items (one shown as mounte
 
 🟢  Google Drive	<br>
 🔴  Secret Encrypted Data<br>
+
 
 Each item will have a submenu, with the following actions: 
 
