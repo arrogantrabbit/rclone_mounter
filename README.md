@@ -50,3 +50,11 @@ Each item will have a submenu, with the following actions:
 Checkout the repository and run the `make run` to create `Mounter.app` wrapper at `~/Applications` and launch it. Look for '🏔' in the menu bar.
 
 Run `make` without arguments to list available targets
+
+
+### Contribution guidelines
+
+1. Fork the project
+2. Make and test your changes
+3. Make sure `make lint` passes
+4. Optionally, submit PR

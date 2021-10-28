@@ -9,7 +9,7 @@ help:
 	@echo 
 	@fgrep -h "##" $(MAKEFILE_LIST) | fgrep -v fgrep | sed -e 's/\\$$//' | sed -e 's/##//'
 	@echo
-	@echo "Example: "
+	@echo "Most useful Example: "
 	@echo "   make run"
 
 define check_install_shell
@@ -19,6 +19,9 @@ endef
 define check_install_pip3
 	@[[ ! -z $$(pip3 list | grep "$(1)" ) ]] ||  pip3 install $(1)
 endef
+
+
+## -== Build and run ==-  
 
 .PHONY: check-tools 
 check-tools: 		## Check for tools and python modules. Installs python modules as needed
@@ -30,10 +33,10 @@ check-tools: 		## Check for tools and python modules. Installs python modules as
 	$(call check_install_pip3,psutil)
 
 .PHONY: patch-rclone-path
-patch-rclone-path: 	## Embed absolute path to rclone on this system to Mounter.py
+patch-rclone-path: 	## Embed absolute path to rclone on this system to mounter.py
 patch-rclone-path: check-tools
-	@echo "Patching the rclone path in Mounter.py"
-	@sed -i "" "s|rclone_binary = .*$$|rclone_binary = \"$$(which rclone)\"|g" Mounter.py
+	@echo "Patching the rclone path in mounter.py"
+	@sed -i "" "s|rclone_binary = .*$$|rclone_binary = \"$$(which rclone)\"|g" mounter.py
 
 define platypusify
 	@echo targeting $(2)
@@ -44,7 +47,7 @@ define platypusify
 	     --interface-type "Status Menu"  \
 	     --status-item-kind "Text" --status-item-title '🏔' --status-item-sysfont \
 	     --bundle-identifier "com.arrogantrabbit.mounter" \
-	     "./Mounter.py" \
+	     "./mounter.py" \
 	     "$(2)" $(1)
 endef
 
@@ -59,23 +62,29 @@ run: install
 	@echo "Launching $(TARGET)"
 	@open "$(TARGET)"
 
+
+## -== Development support ==-  
+
+
 .PHONY: check-tools-dev 
 check-tools-dev: 	## Checks for tools useful for development
 check-tools-dev: check-tools
 	@echo "Checking for dev tools"
 	$(call check_install_pip3,black)
 	$(call check_install_pip3,flake8)
+	$(call check_install_pip3,pylint)
 
 
-.PHONY: format
-format: 		## Run Black formatter and Flake8
-format: check-tools-dev 
-	@python3 -m black --line-length 90 Mounter.py
-	@python3 -m flake8 --max-line-length 90 Mounter.py
+.PHONY: lint
+lint: 				## Run Black formatter, Flake8, and pylint
+lint:  
+	@python3 -m black --line-length 90 mounter.py
+	@python3 -m flake8 --max-line-length 90 mounter.py
+	@python3 -m pylint mounter.py
 
 .PHONY: install-dev
 install-dev:		## Create wrapper with symlink to script and verbose logging.
-install-dev: check-tools-dev format patch-rclone-path
+install-dev: check-tools-dev lint patch-rclone-path
 	$(call platypusify,--symlink,$(LOCAL_TARGET))
 	
 .PHONY: run-dev
