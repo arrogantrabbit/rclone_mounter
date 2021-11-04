@@ -161,7 +161,7 @@ def construct_rclone_command_for_remote(remote, path, remote_obj):
 
     remote_path = remote + ":"
     if "path" in remote_obj:
-        remote_path = remote_path + remote_obj['path']
+        remote_path = remote_path + remote_obj["path"]
 
     return (
         [
