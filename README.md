@@ -9,6 +9,8 @@
 
 ### Configuration
 
+#### Remote Naming
+
 Name rclone remotes with the expectation that the script: 
 - Derives user-readable title from rclone remote names by replacing `-` with ` ` and converting to title case
 - Skips remote if its name ends with specific suffixes, such as `-hidden`, `-intermediate`, `-raw`, etc. This is handy when using crypt remote: you would not want to manually mount the underlying raw storage, only mount crypt remote.
@@ -44,6 +46,9 @@ Each item will have a submenu, with the following actions:
 ❌ Force<br>
 🎣 Mount<br>
 🔍 Logs<br>
+
+#### Specifying remote mount path
+By default the root of the remote will be mounted. To mount a specific sub-path -- add `path = /sub/path` to the remote configuration
 
 ### Usage
 

@@ -156,15 +156,20 @@ def run_helper(shortname, args):
             logging.error("%s: %s", shortname, process.stderr)
 
 
-def construct_rclone_command_for_remote(remote, path):
+def construct_rclone_command_for_remote(remote, path, remote_obj):
     """Construct rclone command for specific remote"""
+
+    remote_path = remote + ":"
+    if "path" in remote_obj:
+        remote_path = remote_path + remote_obj['path']
+
     return (
         [
             RCLONE_BINARY,
             "--config",
             RCLONE_CONFIG,
             "mount",
-            remote + ":",
+            remote_path,
             path,
             "--volname",
             make_title(remote),
@@ -218,13 +223,15 @@ def flush_directory_caches(daemons, path=None):
             os.kill(pid, signal.SIGHUP)
 
 
-def perform_action_for_remote(remote, action, daemons):
+def perform_action_for_remote(remote, action, remotes, daemons):
     """Action router for remotes"""
     path = make_path(remote)
     if CAPTION_MOUNT in action:
         if not os.path.exists(path):
             run_helper("mkdir", ["mkdir", "-p", path])
-        run_helper("rclone", construct_rclone_command_for_remote(remote, path))
+        run_helper(
+            "rclone", construct_rclone_command_for_remote(remote, path, remotes[remote])
+        )
     elif CAPTION_SAFE_UNMOUNT in action:
         run_helper("unmount", ["/usr/sbin/diskutil", "unmount", path])
         run_helper("rmdir", ["/bin/rmdir", path])
@@ -295,7 +302,7 @@ def perform_action(action, remotes, daemons):
     logging.info('Action received: "%s"', action)
     for remote in remotes:
         if not is_hidden(remote) and make_title(remote) in action:
-            perform_action_for_remote(remote, action, daemons)
+            perform_action_for_remote(remote, action, remotes, daemons)
             return
     perform_action_global(action, daemons)
 
