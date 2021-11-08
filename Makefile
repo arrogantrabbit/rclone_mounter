@@ -76,7 +76,7 @@ check-tools-dev: check-tools
 
 
 .PHONY: lint
-lint: 				## Run Black formatter, Flake8, and pylint
+lint: 			## Run Black formatter, Flake8, and pylint
 lint:  
 	@python3 -m black --line-length 90 mounter.py
 	@python3 -m flake8 --max-line-length 90 mounter.py
