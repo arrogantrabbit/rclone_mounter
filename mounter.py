@@ -208,6 +208,9 @@ def active_daemons():
         except psutil.ZombieProcess:
             logging.warning("rclone(%d) is a zombie process, skipped", proc.pid)
             continue
+        except psutil.AccessDenied:
+            logging.warning("rclone(%d) cannot be open, access denied, skipped", proc.pid)
+            continue
         if "--daemon" not in cmdline:
             continue
         result[proc.pid] = cmdline
